@@ -2,6 +2,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage{natbib}
 \usepackage{graphicx}
+\usepackage{amsmath}
 
 
 \title{Background Reading List Analysis}
@@ -9,15 +10,19 @@
 \date{October 2018}
 
 \maketitle
+
+
 \begin{document}
-
-
 I will write my notes regarding the first 5 documents that Kris sent me on October 8th 2018 in an email titled "RE:reading material"
 
 The documents are \cite{Alessio2006}, \cite{Bailey2014}, \cite{Zeng2001}, \cite{vanderVos2017}, \cite{Qi2006}
+\newpage
 
+\tableofcontents
+
+\newpage
 \section{PET Image Reconstruction - 
-alessioPETRecon \cite{Alessio2006}}
+alessioPETRecon} \cite{Alessio2006}
 \subsection{The model}
 One way to represent the imaging system is with the following linear relationship
 \begin{equation}\label{eq.model}
@@ -27,7 +32,7 @@ p = Hf + n
 \subsection{Central Slice Theorem}
 also known as central-slice theorem or Fourier-slice theorem is a foundational relationship found in analytically image reconstruction. The theorem states that that the Fourier transform of a one-dimensional projection $p(s, \phi)$ is equivalent to a section, or profile, $P(v_s,\phi)$ at the same angle through the center of the two-dimensional Fourier transform of the object, Fig.\ref{Fig.Central-Slice}. Here we see that the 1D projection (photon detection in the "camera") is transformed into Fourier space. The Fourier projection is equivalent to a section/profile, at the same angle and through the center, of the 2D Fourier transform of the object. If we know $P(v_s,\phi)$ for all angles $0\leq \phi \leq \pi$ then we can fill in the values of $F(v_x,v_y)$. The inverse of this 2D Fourier transform provides us with $f(x,y)$ in the patient (lab) frame.
 
-\begin{figure} [h]
+\begin{figure}
 \centering
 	\includegraphics[width=\linewidth]{Background Reading Analysis/Central-section_theorem.png}
     \caption{\label{Fig.Central-Slice}}
@@ -191,24 +196,169 @@ Another trade-off is in image quality is bias vs. variance. PET data is random -
 
 
 \newpage
-\section{Nuclear Medicine Physics: A Handbook for Teachers and Students \cite{Bailey2014}}
+\section{Nuclear Medicine Physics: A Handbook for Teachers and Students} \cite{Bailey2014}
 
 \subsection{Chapter 13: Image Reconstruction}
 This is known as an inverse problem - it is harder to make software to compute the true tracer distribution from photon data than to simulate tracer distribution and predict photon acquisition. As other books have mentioned, there are really two ways to reconstruct and image - analytically using mathematical inversion and iterative...
+
+
+Central slice/section theorem is important in analytically reconstruction as it gives the relationship between the Fourier transform of an image and its parallel projections.
+
+\textbf{Radon (x-ray) Transform}
+
+\begin{equation}
+\begin{split}
+	Y(s,\phi) & = \int_{-\infty}^{\infty} \int_{-\infty}^{\infty} \Lambda (x,y) \delta_{s=x\cos\phi + y\sin\phi}\ dx\ dy\\
+   & =\int_{-\infty}^\infty \Lambda (s\cos\phi - t\sin\phi, s\sin\phi + t\cos\phi)\ dx\ dy
+    \label{eq.x-ray transform}
+ \end{split}
+\end{equation}	
+Where $\delta$ is unity for the points on the LOR $(s,\phi)$ and zero everywhere else. The Radon Transform describes the acquisition process in 2D PET and SPECT (with parallel hole collimation and attenuation ignored).
+
+\textbf{Backprojection}
+\begin{equation}
+\begin{split}
+B(x,y) &= backproj(Y(s,\phi)) \\
+& =\int_0^\pi d\phi \int_{-\infty}^{\infty} Y(s,\phi)\delta_{s=x\cos\phi + y\sin\phi}\ ds \\
+& = \int_0^\pi Y(x\cos\phi + y\sin\phi, \phi) d\phi
+\end{split}
+\end{equation}
+NOTE This backprojection is not the inverse of the projection, $B(x,y) \neq \Lambda(x,y)$ 
+
+The central slice theorem used to reconstruct an unknown image Λ(x, y) from its known projections y(s, φ).
+
 
 
 
 The FBP algorithm. This algorithm involves the following steps:
 
 \begin{enumerate}
-\item apply 1-d Fourier transform to $y(s, φ)$ to obtain $(F_1y)(ν, φ)$;
-\item filter $(F_1y)(ν, φ)$ with the so-called ramp filter |ν|;
-\item apply the 1-d inverse fourier transform to obtain the ramp filtered projections
-\item apply the back-projection operator eq. (13.2) to Y(s,) to obtain the desired image Λ(x, y).
+\item apply 1-d Fourier transform to $Y(s, φ)$ to obtain $(\mathscr{F}_1y)(ν, \phi)$;
+\item filter $(\mathscr{F}_1y)(ν, \phi)$ with the so-called ramp filter $|ν|$;
+\item apply the 1-D inverse Fourier transform to obtain t:/he ramp filtered projections $\hat{Y}(s,\phi) = \int \mathscr{F}_1 Y(\nu, \phi) |v| e^{i2\pi\nu s}d\nu$
+\item apply the back-projection operator eq.(13.2) to $Y(s,\phi)$ to obtain the desired image Λ(x, y).
 \end{enumerate}
 
 
+\subsubsection{Iterative Reconstruction}
+In analytically reconstruction, it is initially assumed that the unknown object can be represented as a function $\Lambda(\vec{x}),\ \vec{x}\in \mathbb{R}^3$ and data is acquired as a function $Y(s,\theta), s\in\mathbb{R}^2$ and $\theta$ a unit vector in $\mathbb{R}^2$ or $\mathbb{R}^3$. The reconstruction algorithm is then derived via mathematical inversion resulting in a algorithm that is discretized for software implementation.
 
+In iterative reconstruction, the problem is initial discretized to reduce the reconstruction problem to finding an finite set of unknown values from a finite set of equations, which can be numerically solved. The advantage of numerical inversion is that only a model for the acquisition process is needed, not for its inverse. That makes it easier (although it may still be non-trivial) to take into account some of the undesired but unavoidable effects that complicate the acquisition, such as photon attenuation, position dependent resolution, gaps between the detectors and patient motion.
+
+We call the unknown image values $\lambda$ and the known measured values $\textbf{y}$. The image can be reconstructed with:
+
+\begin{equation}
+\textbf{y} = \textbf{A} \lambda +\bar{\textbf{b}} +\textbf{n}
+\end{equation}
+where $\bar{\textbf{b}}$ is some additive contribution and $\textbf{n}$ is measurement noise. This can be written in element form
+\begin{equation}
+y_i = \sum_{j=1}^J = A_{ij}\lambda_{j} +\bar{b}_j + n_j, \ \ \ \ \ \ i=1,...,I 
+\end{equation}
+Here $y_i$ denotes the number of photons measured on the $i^{th}$ LOR, where $i$ runs over all the sinogram elements. $j$ runs over all the image voxels. $A_{ij}$ is the probability that a unit of radioactivity in $j$ gives rise to the detection of a photon pair (PET) in the $i^{th}$ LOR. $\bar{\textbf{b}}$ represents the background noise i.e. scatter and randoms in PET. Finally we have $n_i$ that represents the noise contribution to the $i^{th}$ LOR. 
+
+So basically, find $\lambda$ given $\textbf{A},\textbf{y},\bar{\textbf{b}}$ and a statically noise model for $\textbf{n}$. 
+
+\textbf{Objective functions}
+
+The presence of noise precludes exact reconstruction and thus reconstruction is viewed as an optimisation task.
+
+We can apply a Bayesian approach by searching for an image $\hat{\lambda}$ that maximises the conditional probability on the data.
+
+\begin{equation}
+\begin{split}
+\hat{\lambda} &= \text{argmax} \ P(\lambda|\textbf{y}) \\ 
+&= \text{argmax} \ \frac{P(\textbf{y}|\lambda)P(\lambda)}{P(\textbf{y})} \\
+&= \text{argmax} \ P(\textbf{y}|\lambda)P(\lambda)\\
+&= \text{argmax} (\ln{\text{argmax} \ P(\textbf{y}|\lambda)}  + \ln{P(\lambda)}  )
+\end{split}
+\end{equation}
+the second equation is Bayes' Rule, the third equation holds because $\textbf{y}$ does not depend on $\lambda$, and the fourth is valid because a logarithm does not change the position f the maximum.
+
+The probability $P(\textbf{y}|\lambda)$ is the likelihood of measuring the sinogram $\textbf{y}$ if the tracer distribution is $\lambda$. The probability $P(\lambda)$, often know as the prior distribution, represents a priori knowledge of the tracer distribution available before PET acquisition.
+ 
+ \subsubsection{\textbf{Optimisation algorithms - Page 473}}
+The objective function:
+\begin{equation}
+\hat{y}_i = \sum_i A_{ij}\lambda_j  \bar{b}
+\end{equation}
+is considered optimised when its first derivatives are zero
+
+\begin{equation}
+\frac{\delta L_{ML}(\lambda)}{\delta\lambda_j}=\sum_i A_{ij} \frac{y_i - \hat{y}_i}{\hat{y}_i} 
+\end{equation}
+ The optimisation can be carried out by a steepest ascent method. The gradient of the previous objective function:
+ \begin{equation}
+ \textbf{d}^k= \nabla  L(\lambda^{k-1})
+ \end{equation}
+ Increments the update of the object:
+ \begin{equation}
+ \lambda^k = \lambda^{k-1} +a_k \textbf{d}^k
+ \end{equation}
+ where the multiplier $a_k$is given by:
+\begin{equation}
+a_k = \text{arg max} L(\lambda^{k-1} +\alpha\textbf{d}^k )
+\end{equation}
+Where k and k-1 represent the iteration number and $\nabla L$ represents the vector of the first derivatives of \textit{L} w.r.t. $\lambda_j$.
+
+This method of steepest gradient ascent is known to be sub-optimal, requiring multiple iterations to reach a reasonable convergence. Approximate the first derivatives if $L$ with the first order Taylor Expansion gives:
+\begin{equation}
+\nabla L(\lambda^{k-1} + \textbf{p}_k ) = 0
+\end{equation}
+\begin{equation}
+\nabla L(\lambda^{k-1}) + \textbf{H}\textbf{p}_k \approx  0
+\end{equation}
+
+\begin{equation}
+\begin{split}
+\textbf{p}_k &= -\textbf{H}^{-1} \nabla L(\lambda^{k-1}) \\
+&= \textbf{H}^{-1} \textbf{d}^k
+\end{split}
+\end{equation}
+
+\textbf{p}_k = -$\textbf{H}$ is the Hessian (second order derivatives of $L$). This matrix is very large but easy to compute for the weighted least squared (WLS) and Maximum Likelihood (ML) objective functions. It is usually impossible to calculate the inverse of $\textbf{H}$. Instead, other algorithms can be used to obtain a good $\textbf{M}$ do derive a so-called preconditioned gradient acent algorithm:
+\begin{equation}
+\begin{split}
+& \textbf{d}^k = \nabla L(\lambda^{k-1})\\
+& \lambda^k = \lambda^{k-1} + \alpha_k \textbf{M}\textbf{d}_k
+\end{split}
+\end{equation}
+It should be noted that $\textbf{M}$ must be symmetric positive definite to ensure convergence. A simple way to obtain a reasonable $\textbf{M}$ is to use only the diagonal elements of $\textbf{H}$: $\textbf{M}_{ii} = –1/\textbf{H}_{ii} \text{ and } \textbf{M}_{ij} = 0 \text{ if } i \neq j$. However, there are other more sophisticated methods and this optimisation function is used.
+
+In every iteration, the algorithm starts moving in the direction of maximum gradient (i.e. perpendicular to the isocontour)  and keeps moving along the same line until a maximum is reached (i.e. the line is tangent to the isocontour). This will often lead to a zigzag line, see Fig.\ref{Fig.isocontourzigzag}.
+\begin{figure}
+\centering
+	\includegraphics[width=\linewidth]{Background Reading Analysis/IsocontourZigZag.png}
+    \caption{\label{Fig.isocontourzigzag}}
+\end{figure}
+
+
+
+
+
+\\subsubsection{Maximum -likelihood expectation-maximisation (MLEM)}
+We with to find the image $\lambda$ that maximises the likelihood function $L_{ML}$. \textbf{EM} does this differently. Instead of concentrating on $L_{ML}$, \textbf{EM} introduces a set of so-called '\textit{complete data}' $x_{ij}$, defined as the number of photons that were emitted from voxel $j$ and detected along LOR $i$ during measurement. This unobserved data are 'complete' in the sense they describe more detail than the observed data $y_i$ (the measurements). The variables $x_{ij}$ are Poisson distributed. We can write the log-likelihood function for observing the data $x_{ij}$ are while $\bar{x}_{ij} = A_{ij}\lambda_j$ were expected:
+
+\begin{equation}
+L_x(\lambda) = \sum_i \sum_j x_{ij} \ln (A_{ij} \lambda_j) - A_{ij}\lambda_j
+\end{equation}
+However this cannot be computed because the data $x_{ij}$ are not available. The emission measurement only produces the sum of the complete data, since:
+\begin{equation} \label{eq.project_x}
+y_i = \sum_j A_{ij} x_{ij} + b_i
+\end{equation}
+where $b_i$ represents the actual (also unobserved) additive contribution $b_i$ in LOR $i$.
+
+The \textbf{EM} recipe prescribes computing the expectation of $L_x$ based on the available data and the current reconstruction. Based on the reconstruction alone, the estimate would be written as:
+\begin{equation}
+E(x_{ij}|\lambda^{(k)}) = A_{ij}\lambda_j^{(k)}
+\end{equation}
+However, as we know that $x_{ij}$ should satisfy Eq.\ref{eq.project_x}  the estimate becomes:
+\begin{equation}
+E(x_{ij}|\lambda^{(k)},\textbf{y}) =  \frac{y_i}{\sum_j A_{ij}\lambda_j^{(k)} + \bar{b_i}}    A_{ij}\lambda_j^{(k)}
+\end{equation}
+
+
+
+Just finished page 479
 
 
 
@@ -216,11 +366,13 @@ The FBP algorithm. This algorithm involves the following steps:
 
 
 \newpage
-\section{Image Reconstruction - a tutorial \cite{Zeng2001ImageTutorial}}
+\section{Image Reconstruction - a tutorial} \cite{Zeng2001}
 
 2D pictures of a 3D object are the projections. The image reconstruction process takes these projections and tries to determine an image of the object.  
 
 The rest of this document was well covered in Alessio's document \cite{Alessio2006} 
+
+
 
 
 
