@@ -423,7 +423,36 @@ To ensure convergence ans sufficient progress, the length step $\alpha$ decrease
 
 
 
-\subsection{}
+\subsection{L-BFGS-B-PC and L-BFGS-B Pseudo Code}
+\begin{figure}
+	\centering
+	\includegraphics[width = \linewidth]{Tsai's Thesis Analysis/L-BFGS-B-PC Pseudo Code.png}
+    \caption{\label{Fig.L-BFGS-B-PC Pseudo Code}}
+\end{figure}
+\begin{figure}
+	\centering
+	\includegraphics[width = \linewidth]{Tsai's Thesis Analysis/L-BFGS-B Pseudo Code.png}
+    \caption{\label{Fig.L-BFGS-B Pseudo Code}}
+\end{figure}
+The Preconditioned L-BFGS-B algorithms use two different preconditioned to translate the coordinate system, $\textbf{D}_1 \text{ and } \textbf{D}_2$. $\textbf{D}_1$ is calculated from measured data meaning performance is sensitive to low counts. $\textbf{D}_2$ is calculated from the initial estimate but is thus subject to choice of the initial estimate. As these terms are calculated prior to the loops, reconstruction time is not heavily effected.
+
+At low counts, $\textbf{D}_2$ outperforms $\textbf{D}_1$. At high counts, they are approx. equal. Hence, for her thesis, Tsai refers to $\textbf{D}$ being $\textbf{D}_2$.
+
+
+
+
+\newpage
+\section{A spatially-variant penalty strength with anatomical priors for PML reconstruction in ET}
+
+Tuning of the ratio between the likelihood term and the penalty term of the objective function can be difficult with the use of anatomical priors.
+
+Since the modification is essentially a spatial normalisation method for the penalty function, it is referred to as a spatially-variant penalty strength in this study.
+
+Theory developed in \cite{SangtaeAhn2008AnalysisPET} to a wider class of penalty functions such that it can be applied to any anatomical priors defined in a given neighbourhood structure. This is summaries in Tsai's thesis in section \textbf{4.2 Spatially-variant penalisation.}
+
+
+
+\textit{I SKIPPED THROUGH A LOT OF THE MATHEMATICAL DERIVATIONS}
 
 
 

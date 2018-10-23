@@ -338,7 +338,7 @@ In every iteration, the algorithm starts moving in the direction of maximum grad
 \\subsubsection{Maximum -likelihood expectation-maximisation (MLEM)}
 We with to find the image $\lambda$ that maximises the likelihood function $L_{ML}$. \textbf{EM} does this differently. Instead of concentrating on $L_{ML}$, \textbf{EM} introduces a set of so-called '\textit{complete data}' $x_{ij}$, defined as the number of photons that were emitted from voxel $j$ and detected along LOR $i$ during measurement. This unobserved data are 'complete' in the sense they describe more detail than the observed data $y_i$ (the measurements). The variables $x_{ij}$ are Poisson distributed. We can write the log-likelihood function for observing the data $x_{ij}$ are while $\bar{x}_{ij} = A_{ij}\lambda_j$ were expected:
 
-\begin{equation}
+\begin{equation} \label{eq.log-likelihood_x}
 L_x(\lambda) = \sum_i \sum_j x_{ij} \ln (A_{ij} \lambda_j) - A_{ij}\lambda_j
 \end{equation}
 However this cannot be computed because the data $x_{ij}$ are not available. The emission measurement only produces the sum of the complete data, since:
@@ -356,9 +356,109 @@ However, as we know that $x_{ij}$ should satisfy Eq.\ref{eq.project_x}  the esti
 E(x_{ij}|\lambda^{(k)},\textbf{y}) =  \frac{y_i}{\sum_j A_{ij}\lambda_j^{(k)} + \bar{b_i}}    A_{ij}\lambda_j^{(k)}
 \end{equation}
 
+Inserting this equation into the log-likelihood expression for $L_x(\lambda)$ Eq.\ref{eq.log-likelihood_x} completes the expectation (E) step. Maximisation occurs when the derivative is set to zero.
 
+\begin{equation} \label{eq.LikelihoodGradient}
+\frac{\delta L_x(\lambda)}{\delta\lambda_j} = \sum_i \bigg( \frac{y_i}{\sum_j A_{ij}\lambda_j^{(k)} + \bar{b}_i}\bigg) A_{ij}\lambda_j^{(k)} \frac{1}{\lambda_j} - A_{ij}\bigg)  = 0
+\end{equation}
+This is easily solved for $\lambda_j$ yielding a new reconstruction of $\lambda_j ^{(k+1)}$ .
+\begin{equation}\label{eq.MLEM equation}
+\lambda_j ^{(k+1)} = \frac{\lambda_j ^{(k)}}{\sum_i A_{ij}}\sum_i A_{ij}\frac{y_i}{\sum_j A_{ij}\lambda_k^{(k)}+\bar{b}_i}
+\end{equation}
+This is the well known MLEM algorithm for emission tomography. Each iteration of this raises the value of the likelihood $L_{ML}$. The complete data $x_{ij}$ does not appear in \ref{eq.MLEM equation} but is needed within the derivation. The initial image $\lambda^{(0)}$ must be provided given the iterative algorithm. Typically a uniform positive image is chosen. 
 
-Just finished page 479
+The MLEM algorithm is multiplicative and so the voxel values must be non-zero to be updated. Additionally, the voxel values should be non-negative to avoid a divergent model. Sometime prior operations can lead to negative values and these will likely lead to a divergent system.
+
+\subsubsection{Regularisation}
+MLEM maximises the likelihood by making computed projections as similar as possible to the measured projections, where the similarity is measured based on the Poisson distribution. An upper limit of the  likelihood would be obtained when the measured and calculated projections are identical. However, this is never possible, because Poisson noise introduces inconsistencies. However, most of the noise is consistent and so it propagates through the iterations into the reconstructed image leading to the deterioration of the MLEM image at high iteration numbers.
+
+\textbf{Maximum a posteriori or Penalised likelihood}
+Smoothing the MLEM image is not elegant, first the likelihood is maximised and then decreased by smoothing the image. A more sophisticated method would be to modify the objective function. This can be done using a Bayesian approach, equivalent to combining the likelihood with a penalty function.
+
+It is assumed that a good reconstruction image $\lambda$ will be obtrained if that image maximises the (log of the) probability $p(\lambda|\textbf{y})$ given:
+
+\begin{equation}
+\hat{\lambda} = \text{arg max} \ln p(\lambda|\textbf{y}) + \ln p(\lambda)
+\end{equation}
+The second term represents the priori knowledge about tracer distribution, which we usually believe is smooth. This is achieved with a Markov prior that governs the probability for a particular voxel, given the value of other voxels in it's neighbourhood $\textbf{N}_j$. Such priors are usually written in the following form:
+\begin{equation}
+\begin{split}
+P(\lambda) 
+&= \ln p(\lambda)\\
+&= \sum_j \ln p(\lambda_j | \lambda_k , k\in \textbf{N}_j)\\
+&= -\beta \sum_j \sum_{k\in \textbf{N}_j} E(\lambda_j, \lambda_k)
+\end{split}
+\end{equation}
+where $E(\lambda_j \lambda_k)$ an 'energy' function designed to obtain noise suppressing behaviour and the parameter $\beta$ is the weight assigned to the prior information.
+There are many possible energy functions but generally they further simplify the function by taking the absolute difference of the voxels $x =|\lambda_j - \lambda_k|$. Some popular energy functions are: quadratic $x^2$, Huber prior (quadratic for $x \leq 1$ and linear for $x \gt 1$), and Geman, which converges asymptotically for a constant of large differences, implying it does not smooth for all over very large pixel differences. 
+
+It can be shown, if $E(\lambda_j \lambda_k)$ is concave then the system is concave with one maxima, i.e. the quadratic and Huber energy functions. In contrast, the Geman is not concave and so can result in local maxima leading to careful initialisation of the iterative method because the final image depends on the starting location.
+
+When MAP (maximum a posteriori) with a quadratic prior reconstructs with position dependant smoothing due to the likelihood being reduced with less photons as a result of photon attenuation.
+
+\subsubsection{One Step Late}
+An example of a MAP algorithm involves adding of the derivitive of prior $P(\lambda)$ to Eq.\ref{eq.LikelihoodGradient}.
+
+\begin{equation} \label{eq.OneStepLate}
+\begin{split}
+\frac{\delta( L_x(\lambda) + P(\lambda))}{\delta\lambda_j} & = \sum_i \bigg( \frac{y_i}{\sum_j A_{ij}\lambda_j^{(k)} + \bar{b}_i}\bigg) A_{ij}\lambda_j^{(k)} \frac{1}{\lambda_j} - A_{ij}\bigg)  + \frac{\delta P(\lambda)}{\delta \lambda_j} \\
+&= \sum_i \bigg( \frac{y_i}{\hat{y}_i^{(k)}}\bigg) A_{ij}\lambda_j^{(k)} \frac{1}{\lambda_j} - A_{ij}\bigg)  + \frac{\delta P(\lambda)}{\delta \lambda_j}\\
+&= 0
+\end{split}
+\end{equation}
+The issue with this equation is the derivative $\frac{\delta P(\lambda)}{\delta \lambda_j}$ is a function of the unknown image so we must use the current reconstruction$\lambda^{(k)}$ so the updated image can be given by:
+
+\begin{equation}
+\lambda_j^{(k+1)} = \frac{\lambda_j^{(k)}}{ \sum_i A_{ij} - \frac{\delta P(\lambda)}{\delta \lambda_j}\bigg|_{\lambda^{(k)}} }  \sum_i A_{ij} \frac{y_i}{\hat{y}_i^{(k)}}
+\end{equation}
+\subsubsection{Corrections for distortions and contamination of physical effects}
+Types distortion effects:
+
+\begin{itemize}
+\item detector resolution 
+\item collimator effects
+\item non-collinearity  
+\item positron range) 
+\item motion effects
+\end{itemize}
+
+The contamination effects can be divided into multiplicative and additive terms. 
+The multiplicative factors include: 
+\begin{itemize}
+\item attenuation
+\item detector normalisation factors
+\item coefficients accounting for the decay time
+\item geometrical restriction
+\end{itemize}
+The additive terms include: scattered and random coincidences.
+
+The easiest approach to compensate for the contamination effects is to include a multiplicative correction term to the system model while preserving the Poisson characteristics of the data. However, this can lead to an increase in the number of non-zero elements of the system matrix (i.e. the matrix is no longer sparse) and thus the system is more ill-posed and thus more computationally expensive.
+
+The more commonly used and practical approach is to use correction effects as multiplicative factors and additive terms within the forward projection of the model for the iterative reconstruction algorithms:
+
+\begin{equation}
+\textbf{y} = \textbf{A}\lambda+\textbf{b}
+\end{equation}
+Here the corrections are applied within the system matrix $\textbf{A}$  
+
+\textbf{Multiplicative effects}
+We can factor the system matrix into its multiplicative components:
+\begin{equation}
+\textbf{A} = \textbf{A}_{det.sens}\textbf{A}_{det.blur}\textbf{A}_{att}\textbf{A}_{geom}\textbf{A}_{tof}\textbf{A}_{positron}
+\end{equation}
+\begin{itemize}
+\item $\textbf{A}_{positron}$ models the positron range
+\item $\textbf{A}_{tof}$ models the timing accuracy of the TOF PET systems
+\item $\textbf{A}_{geom}$ the geometric projection matrix is the core of the system matrix with geometric mapping between the source (voxel $j$) and data (projector bin $i$, defined by the LOR or time bin in the TOF cases). This does geometrical mapping based on probability (in absence of attenuation) that photon pairs emitted from image location reach the front faces of a given crystal pair (LOR).
+\item $\textbf{A}_{att}$ is a diagonal matrix containing attenuation factors on individual LORs
+\item $\textbf{A}_{det.blur}$ models the accuracy of reporting the true LOR positions
+\item $\textbf{A}_{det.sens}$ a diagonal matrix modelling the probability that an event will be reported once the photon pair reaches the detector surface. This is a unique multiplicative factor for each detector crystal pair (LOR) modelled by normalisation coefficients, but can also include detector axial extent and detector gaps. 
+
+\end{itemize}
+\textbf{Additive contributions}
+The two major additive contaminators are scatter (in both PET and SPECT) and random events (PET). Simply subtracting the estimates ($\bar{s}$ and $\bar{r}$) from the acquired data works in analytically reconstruction but is not effective in statistical iterative methods. These methods (such as MLEM) are designed for Poisson distributed data and furthermore, subtraction of the estimates may introduce negative values to the pre-corrected data (reminder, iterative methods cannot handle negative values as it leads to a divergent algorithm). 
+
+In practice, these compensation terms are included in the bias of the forward projection \textbf{b} = $\bar{s} +\bar{r}$ miscellaneous
 
 
 
